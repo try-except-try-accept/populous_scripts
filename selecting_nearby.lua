@@ -56,26 +56,13 @@ function OnTurn()
 	
 	if (shaman ~= nil) then
 		
-		local new_loc_3d = Coord3D.new()	
-		log("3d coords obj")
-		
-		new_loc_3d.Xpos = shaman.Pos.D3.Xpos + G_RANDOM(10)
-		new_loc_3d.Zpos = shaman.Pos.D3.Zpos + G_RANDOM(10)
-		new_loc_3d.Ypos = shaman.Pos.D3.Ypos			
-		
-		log("3d coords set")
-		
-		local new_loc_2d = MapPosXZ.new();
-		log("2d coords obj")
-		new_loc_2d.Pos = world_coord3d_to_map_idx(new_loc_3d);
-		
-		log("3d to 2d converted")
-		-- Laying random tower plans near the shaman
-		BUILD_DRUM_TOWER(TRIBE_BLUE, new_loc_2d.XZ.X, new_loc_2d.XZ.Z);		
-
-		log("laid tower plan - why can't i see?")
-
-		get
+		local c3d = shaman.Pos.D3			
+		new_loc_2d.Pos = world_coord3d_to_map_idx(c3d);					
+		local braves = get_nearest_n_things(c3d, 100, T_PERSON, TRIBE_BLUE, 10)		
+		for i, dude in pair(braves) do
+			log("Found a brave")
+			log(type(dude))
+		end
 		
 		-- Or.... spawning random tower plans
 		--------------------------------------------------
@@ -83,6 +70,50 @@ function OnTurn()
 		--createThing(T_BUILDING, M_BUILDING_DRUM_TOWER, TRIBE_BLUE, new_loc_3d, false, false)
 		--log("spawned a tower - this works!")
 	
+	end
+end
+
+
+function get_nearest_n_things(c3d, radius, thing_type, owner, n)
+	
+	local count = 0	
+	local selection = {}
+	log("init locals")
+	
+	for s = 1, radius, SCAN_INCREMENT
+	do 	
+		log("Looping. s is "... s)
+		SearchMapCells(
+			CIRCULAR, 0, 0, s, world_coord3d_to_map_idx(c3d),
+			function(me)
+				me.MapWhoList:processList(
+				function(current_thing)
+					log("current thing is")
+					log(type(current_thing))
+					
+					if (current_thing.Type == thing_type) then
+						if (current_thing.Owner ~= owner) then													
+							log("Found something I'm looking for!")
+							table.insert(selection, current_thing)
+							count++
+							if (count==n) then								
+								return false
+							end
+							
+						end
+						return true -- keep  processList() loop running
+					end					
+				end)
+				
+				if (count==n) then								
+					return false
+				end
+				return true -- keep  SearchMapCells() loop running
+			end)
+			
+		log("Found" .. n .. "things in total")
+		
+		return selection
 	end
 end
 
